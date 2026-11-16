@@ -4,6 +4,9 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -51,3 +54,15 @@ jobs:
           name: tyracraft-elf
           path: bin/*.elf
           if-no-files-found: error
+
+      # Rolling "latest-build" release so the ELF can be downloaded without
+      # logging in (Actions artifacts require auth).
+      - name: Publish latest-build release
+        if: github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-build
+          name: Latest build
+          prerelease: true
+          make_latest: false
+          files: bin/*.elf
