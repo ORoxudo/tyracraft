@@ -1,0 +1,42 @@
+name: Build TyraCraft
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: h4570/tyra
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # This code (master, Aug 2024) was written against the Tyra engine of
+      # that time. Pin the engine inside the image to its last commit before
+      # 2024-08-17 so newer engine API changes don't break the build.
+      - name: Pin Tyra engine version
+        run: |
+          if [ -d /tyra/.git ]; then
+            cd /tyra
+            git config --global --add safe.directory /tyra
+            git fetch --quiet origin || true
+            REF=$(git rev-list -1 --before=2024-08-17 HEAD)
+            echo "Engine commit: $REF"
+            git checkout --quiet "$REF"
+          else
+            echo "/tyra is not a git repo, using the engine bundled in the image"
+          fi
+
+      - name: Build engine
+        run: make build-engine -j"$(nproc)"
+
+      - name: Build game
+        run: make -j"$(nproc)"
+
+      - name: Upload ELF
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyracraft-elf
+          path: bin/*.elf
+          if-no-files-found: error
