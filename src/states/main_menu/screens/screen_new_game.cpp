@@ -1,4 +1,5 @@
 #include "states/main_menu/screens/screen_new_game.hpp"
+#include "managers/input_repeat.hpp"
 #include "states/main_menu/screens/screen_mini_game.hpp"
 #include "states/main_menu/screens/screen_main.hpp"
 #include "managers/save_manager.hpp"
@@ -363,7 +364,7 @@ void ScreenNewGame::handleInput() {
 }
 
 void ScreenNewGame::handleOptionsSelection() {
-  auto clickedButtons = this->context->context->t_engine->pad.getClicked();
+  auto clickedButtons = InputRepeat_getClicked();
 
   if (needToChangeWorldName) {
     if (clickedButtons.Cross) {
@@ -426,7 +427,7 @@ void ScreenNewGame::handleOptionsSelection() {
 }
 
 void ScreenNewGame::handleSeedInput() {
-  auto clickedButtons = this->context->context->t_engine->pad.getClicked();
+  auto clickedButtons = InputRepeat_getClicked();
   auto validChars = NumericValidChars;
   std::size_t found = validChars.find(tempSeed[editingIndex]);
   u8 currentCharIndex = found != std::string::npos ? found : 0;
@@ -460,7 +461,7 @@ void ScreenNewGame::handleSeedInput() {
 }
 
 void ScreenNewGame::handleWorldNameInput() {
-  auto clickedButtons = this->context->context->t_engine->pad.getClicked();
+  auto clickedButtons = InputRepeat_getClicked();
   auto validChars = SpecialValidChars + AlphanumericValidChars;
   std::size_t found = validChars.find(tempWorldName[editingIndexWorldName]);
   u8 currentCharIndex = found != std::string::npos ? found : 0;

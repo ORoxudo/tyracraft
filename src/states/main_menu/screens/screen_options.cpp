@@ -1,4 +1,5 @@
 #include "states/main_menu/screens/screen_options.hpp"
+#include "managers/input_repeat.hpp"
 #include "states/main_menu/screens/screen_main.hpp"
 #include "managers/font/font_manager.hpp"
 
@@ -276,25 +277,25 @@ void ScreenOptions::init() {
 void ScreenOptions::handleInput() {
   // Change active option
   {
-    if (context->context->t_engine->pad.getClicked().DpadDown) {
+    if (InputRepeat_getClicked().DpadDown) {
       int nextOption = (u8)activeOption + 1;
       if (nextOption > static_cast<u8>(OptionsScreenOptions::RStickDeadZoneV))
         activeOption = OptionsScreenOptions::VSyncOnOff;
       else
         activeOption = static_cast<OptionsScreenOptions>(nextOption);
-    } else if (context->context->t_engine->pad.getClicked().DpadUp) {
+    } else if (InputRepeat_getClicked().DpadUp) {
       int nextOption = (u8)activeOption - 1;
       if (nextOption < 0)
-        activeOption = OptionsScreenOptions::VSyncOnOff;
+        activeOption = OptionsScreenOptions::RStickDeadZoneV;
       else
         activeOption = static_cast<OptionsScreenOptions>(nextOption);
     }
   }
 
-  if (context->context->t_engine->pad.getClicked().Triangle) {
+  if (InputRepeat_getClicked().Triangle) {
     context->playClickSound();
     context->setScreen(new ScreenMain(context));
-  } else if (context->context->t_engine->pad.getClicked().Cross) {
+  } else if (InputRepeat_getClicked().Cross) {
     context->playClickSound();
     SettingsManager::Save(tempSettings);
     SettingsManager::ApplyChanges(context->context->t_engine);
@@ -305,11 +306,11 @@ void ScreenOptions::handleInput() {
       context->setScreen(new ScreenMain(context));
     }
 
-  } else if (context->context->t_engine->pad.getClicked().DpadLeft) {
+  } else if (InputRepeat_getClicked().DpadLeft) {
     if (activeOption == OptionsScreenOptions::VSyncOnOff) {
       tempSettings.vsync = !tempSettings.vsync;
     } else if (activeOption == OptionsScreenOptions::ReverseCamY) {
-      tempSettings.invert_cam_y = !tempSettings.vsync;
+      tempSettings.invert_cam_y = !tempSettings.invert_cam_y;
     } else if (activeOption == OptionsScreenOptions::CamSensitivityH) {
       tempSettings.cam_h_sensitivity -= 1;
       if (tempSettings.cam_h_sensitivity <= 0)
@@ -331,7 +332,7 @@ void ScreenOptions::handleInput() {
       tempSettings.r_stick_V -= 0.05F;
       if (tempSettings.r_stick_V < 0) tempSettings.r_stick_V = 0;
     }
-  } else if (context->context->t_engine->pad.getClicked().DpadRight) {
+  } else if (InputRepeat_getClicked().DpadRight) {
     if (activeOption == OptionsScreenOptions::VSyncOnOff) {
       tempSettings.vsync = !tempSettings.vsync;
     } else if (activeOption == OptionsScreenOptions::ReverseCamY) {

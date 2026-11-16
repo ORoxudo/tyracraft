@@ -45,6 +45,11 @@ void Ui::init(Renderer* t_renderer, ItemRepository* itemRepository,
 void Ui::update() { this->updateHud(); }
 
 void Ui::renderInventory() {
+  // Refresh the hotbar every frame instead of only on game ticks (20/s), so
+  // changing the selected slot or item shows up immediately.
+  if (this->t_player->selectedSlotHasChanged) this->updateSelectedSlot();
+  if (this->t_player->inventoryHasChanged) this->updatePlayerInventory();
+
   this->t_renderer->renderer2D.render(empty_slots);
 
   // Draw itens from player inventory
@@ -210,16 +215,16 @@ void Ui::updatePlayerInventory() {
   t_player->inventoryHasChanged = 0;
 }
 
+// The inventory is created once and kept in memory: re-creating it loaded
+// five PNGs (one 512x512) from disk every time it was opened, which made
+// opening it slow.
 void Ui::loadInventory() {
-  creativeInventory = new Inventory(t_renderer, t_itemRepository);
+  if (!creativeInventory)
+    creativeInventory = new Inventory(t_renderer, t_itemRepository);
   _isInventoryOpened = true;
 }
 
-void Ui::unloadInventory() {
-  delete creativeInventory;
-  _isInventoryOpened = false;
-  creativeInventory = nullptr;
-}
+void Ui::unloadInventory() { _isInventoryOpened = false; }
 
 void Ui::renderInventoryMenu() {
   if (isInventoryOpened() && creativeInventory) {

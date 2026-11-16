@@ -1,4 +1,5 @@
 #include "states/main_menu/screens/screen_mini_game.hpp"
+#include "managers/input_repeat.hpp"
 #include "states/main_menu/screens/screen_main.hpp"
 #include "managers/save_manager.hpp"
 
@@ -283,7 +284,7 @@ void ScreenMiniGame::init() {
 void ScreenMiniGame::handleInput() { handleOptionsSelection(); }
 
 void ScreenMiniGame::handleOptionsSelection() {
-  auto clickedButtons = this->context->context->t_engine->pad.getClicked();
+  auto clickedButtons = InputRepeat_getClicked();
 
   if (displayPreviousSavePresent) {
     if (clickedButtons.Cross) {

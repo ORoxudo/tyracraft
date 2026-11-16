@@ -1,6 +1,7 @@
 #include "tyracraft_game.hpp"
 #include "managers/font/font_manager.hpp"
 #include "managers/settings_manager.hpp"
+#include "managers/input_repeat.hpp"
 #include "memory-monitor/memory_monitor.hpp"
 #include "utils.hpp"
 #include <sys/types.h>
@@ -32,6 +33,7 @@ void TyraCraftGame::init() {
 
 void TyraCraftGame::loop() {
   const float dt = 1 / static_cast<float>(engine->info.getFps());
+  InputRepeat_update(engine->pad, dt);
   stateManager.update(dt);
 
   engine->renderer.beginFrame(camera.getCameraInfo());

@@ -1,4 +1,5 @@
 #include "states/main_menu/screens/screen_how_to_play.hpp"
+#include "managers/input_repeat.hpp"
 #include "states/main_menu/screens/screen_main.hpp"
 
 ScreenHowToPlay::ScreenHowToPlay(StateMainMenu* t_context)
@@ -49,7 +50,7 @@ void ScreenHowToPlay::init() {
 }
 
 void ScreenHowToPlay::handleInput() {
-  if (this->context->context->t_engine->pad.getClicked().Triangle) {
+  if (InputRepeat_getClicked().Triangle) {
     this->context->playClickSound();
     this->navigate();
   };

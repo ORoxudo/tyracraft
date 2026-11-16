@@ -1,4 +1,5 @@
 #include "states/game_play/states/welcome/state_welcome.hpp"
+#include "managers/input_repeat.hpp"
 #include "managers/font/font_manager.hpp"
 
 StateWelcome::StateWelcome(StateGamePlay* t_context)
@@ -67,7 +68,7 @@ void StateWelcome::render() {
 
 void StateWelcome::handleInput(const float& deltaTime) {
   const PadButtons& clicked =
-      this->stateGamePlay->context->t_engine->pad.getClicked();
+      InputRepeat_getClicked();
 
   if (clicked.Cross) {
     this->playClickSound();

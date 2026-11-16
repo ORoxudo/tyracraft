@@ -1,4 +1,5 @@
 #include "states/main_menu/screens/screen_main.hpp"
+#include "managers/input_repeat.hpp"
 #include "states/main_menu/screens/screen_how_to_play.hpp"
 #include "states/main_menu/screens/screen_options.hpp"
 #include "states/main_menu/screens/screen_about.hpp"
@@ -199,30 +200,30 @@ void ScreenMain::init() {
 void ScreenMain::handleInput() {
   // Change active option
   {
-    if (context->context->t_engine->pad.getClicked().DpadDown) {
+    if (InputRepeat_getClicked().DpadDown) {
       int nextOption = (int)activeOption + 1;
       if (nextOption > static_cast<uint8_t>(ScreenMainOptions::About))
         activeOption = ScreenMainOptions::PlayGame;
       else
         activeOption = static_cast<ScreenMainOptions>(nextOption);
-    } else if (context->context->t_engine->pad.getClicked().DpadUp) {
+    } else if (InputRepeat_getClicked().DpadUp) {
       int nextOption = (int)activeOption - 1;
       if (nextOption < 0)
         activeOption = ScreenMainOptions::About;
       else
         activeOption = static_cast<ScreenMainOptions>(nextOption);
-    } else if (context->context->t_engine->pad.getClicked().DpadRight) {
+    } else if (InputRepeat_getClicked().DpadRight) {
       if (activeOption != ScreenMainOptions::SkinSelection) {
         activeOption = ScreenMainOptions::SkinSelection;
       }
-    } else if (context->context->t_engine->pad.getClicked().DpadLeft) {
+    } else if (InputRepeat_getClicked().DpadLeft) {
       if (activeOption == ScreenMainOptions::SkinSelection) {
         activeOption = ScreenMainOptions::PlayGame;
       }
     }
   }
 
-  if (context->context->t_engine->pad.getClicked().Cross) {
+  if (InputRepeat_getClicked().Cross) {
     context->playClickSound();
     selectedOption = activeOption;
     navigate();

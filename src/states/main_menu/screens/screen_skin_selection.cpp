@@ -1,4 +1,5 @@
 #include "states/main_menu/screens/screen_skin_selection.hpp"
+#include "managers/input_repeat.hpp"
 #include "states/main_menu/screens/screen_main.hpp"
 #include "managers/font/font_manager.hpp"
 
@@ -92,7 +93,7 @@ void ScreenSkinSelection::init() {
 }
 
 void ScreenSkinSelection::handleInput() {
-  auto clickedButtons = context->context->t_engine->pad.getClicked();
+  auto clickedButtons = InputRepeat_getClicked();
 
   if (clickedButtons.DpadLeft) {
     if (isMoving) return;

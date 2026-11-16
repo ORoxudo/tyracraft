@@ -20,7 +20,11 @@ TickManager::~TickManager() {}
 void TickManager::update(const float& deltaTime) {
   elapsedRealTime += deltaTime;
 
-  if (g_ticksFraftion > TICKS_IN_SECONDS) {
+  // Always accumulate frame time (it used to skip it on frames that ran
+  // ticks, so ticks ran slower than 20/s and lagged behind input).
+  g_ticksFraftion += deltaTime;
+
+  {
     while (g_ticksFraftion > TICKS_IN_SECONDS) {
       g_ticksCounter++;
       g_ticksFraftion -= TICKS_IN_SECONDS;
@@ -34,9 +38,6 @@ void TickManager::update(const float& deltaTime) {
         lastTickTimeOccurence = elapsedRealTime;
       }
     }
-
-  } else {
-    g_ticksFraftion += deltaTime;
   }
 
   if (g_ticksCounter > DAY_DURATION_IN_TICKS) {

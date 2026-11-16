@@ -1,4 +1,5 @@
 #include "states/game_play/states/creative/creative_playing_state.hpp"
+#include "managers/input_repeat.hpp"
 #include "managers/save_manager.hpp"
 #include "managers/settings_manager.hpp"
 #include "debug.hpp"
@@ -70,7 +71,7 @@ void CreativePlayingState::render() {
 }
 
 void CreativePlayingState::handleInput(const float& deltaTime) {
-  const auto& clicked = stateGamePlay->context->t_engine->pad.getClicked();
+  const auto& clicked = InputRepeat_getClicked();
 
   if (clicked.Select) g_debug_mode = !g_debug_mode;
   if (g_debug_mode) {
@@ -105,7 +106,7 @@ void CreativePlayingState::handleInput(const float& deltaTime) {
 }
 
 void CreativePlayingState::gamePlayInputHandler(const float& deltaTime) {
-  const auto& clicked = stateGamePlay->context->t_engine->pad.getClicked();
+  const auto& clicked = InputRepeat_getClicked();
   const auto& pressed = stateGamePlay->context->t_engine->pad.getPressed();
   const auto& lJoyPad = stateGamePlay->context->t_engine->pad.getLeftJoyPad();
 
@@ -167,7 +168,8 @@ void CreativePlayingState::gamePlayInputHandler(const float& deltaTime) {
       else if (clicked.DpadDown)
         stateGamePlay->player->selectPreviousItem();
     } else if (stateGamePlay->player->isFlying) {
-      if (pressed.DpadUp) {
+      // Hold Cross (jump) or D-pad Up to go up while flying
+      if (pressed.Cross || pressed.DpadUp) {
         stateGamePlay->player->flyUp(deltaTime);
       } else if (pressed.DpadDown) {
         stateGamePlay->player->flyDown(deltaTime);
@@ -205,7 +207,7 @@ void CreativePlayingState::gamePlayInputHandler(const float& deltaTime) {
 }
 
 void CreativePlayingState::inventoryInputHandler(const float& deltaTime) {
-  const auto& clicked = stateGamePlay->context->t_engine->pad.getClicked();
+  const auto& clicked = InputRepeat_getClicked();
 
   Inventory& creativeInvetory = *stateGamePlay->ui->getInvetory();
 

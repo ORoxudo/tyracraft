@@ -1,4 +1,5 @@
 #include "states/game_play/state_game_play.hpp"
+#include "managers/input_repeat.hpp"
 #include "states/loading/mini_games/state_load_next_level_maze_craft.hpp"
 #include "states/loading/mini_games/state_create_maze_craft.hpp"
 #include "states/game_play/states/in_game_menu/state_game_menu.hpp"
@@ -92,7 +93,7 @@ PlayingStateBase* StateGamePlay::getPreviousState() {
 }
 
 void StateGamePlay::handleInput() {
-  const PadButtons& clicked = this->context->t_engine->pad.getClicked();
+  const PadButtons& clicked = InputRepeat_getClicked();
 
   if (!isAtWelcomeState && clicked.Start) {
     if (this->paused)

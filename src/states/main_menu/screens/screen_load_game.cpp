@@ -1,4 +1,5 @@
 #include "states/main_menu/screens/screen_load_game.hpp"
+#include "managers/input_repeat.hpp"
 #include "states/main_menu/screens/screen_mini_game.hpp"
 #include "states/main_menu/screens/screen_main.hpp"
 #include "managers/save_manager.hpp"
@@ -204,7 +205,7 @@ void ScreenLoadGame::render() {
 void ScreenLoadGame::handleInput() { handleOptionsSelection(); }
 
 void ScreenLoadGame::handleOptionsSelection() {
-  auto clickedButtons = context->context->t_engine->pad.getClicked();
+  auto clickedButtons = InputRepeat_getClicked();
 
   if (clickedButtons.L1) {
     context->setScreen(new ScreenMiniGame(context));

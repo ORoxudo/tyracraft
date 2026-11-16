@@ -1,4 +1,5 @@
 #include "states/game_play/states/minigame/mazecraft/maze_playing_state.hpp"
+#include "managers/input_repeat.hpp"
 #include "managers/settings_manager.hpp"
 #include "managers/save_manager.hpp"
 #include "debug.hpp"
@@ -104,7 +105,7 @@ void MazePlayingState::render() {
 }
 
 void MazePlayingState::handleInput(const float& deltaTime) {
-  const auto& clicked = stateGamePlay->context->t_engine->pad.getClicked();
+  const auto& clicked = InputRepeat_getClicked();
 
   if (clicked.Select) g_debug_mode = !g_debug_mode;
   if (g_debug_mode) {
@@ -135,7 +136,7 @@ void MazePlayingState::handleInput(const float& deltaTime) {
 }
 
 void MazePlayingState::gamePlayInputHandler(const float& deltaTime) {
-  const auto& clicked = stateGamePlay->context->t_engine->pad.getClicked();
+  const auto& clicked = InputRepeat_getClicked();
   const auto& pressed = stateGamePlay->context->t_engine->pad.getPressed();
   const auto& lJoyPad = stateGamePlay->context->t_engine->pad.getLeftJoyPad();
 

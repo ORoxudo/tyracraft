@@ -1,4 +1,5 @@
 #include "states/game_play/states/in_game_menu/state_game_menu.hpp"
+#include "managers/input_repeat.hpp"
 #include "managers/font/font_manager.hpp"
 #include "managers/save_manager.hpp"
 
@@ -154,7 +155,7 @@ void StateGameMenu::render() {
 
 void StateGameMenu::handleInput(const float& deltaTime) {
   const PadButtons& clicked =
-      this->stateGamePlay->context->t_engine->pad.getClicked();
+      InputRepeat_getClicked();
 
   if (needSaveOverwriteConfirmation) {
     if (clicked.Cross) {

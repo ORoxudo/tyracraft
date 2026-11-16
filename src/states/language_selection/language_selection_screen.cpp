@@ -1,4 +1,5 @@
 #include "states/language_selection/language_selection_screen.hpp"
+#include "managers/input_repeat.hpp"
 #include "states/main_menu/state_main_menu.hpp"
 #include <managers/font/font_options.hpp>
 #include <managers/font/font_manager.hpp>
@@ -53,7 +54,7 @@ void StateLanguageSelectionScreen::init() {
 };
 
 void StateLanguageSelectionScreen::update(const float& deltaTime) {
-  auto clickedButtons = context->t_engine->pad.getClicked();
+  auto clickedButtons = InputRepeat_getClicked();
 
   if (clickedButtons.DpadLeft)
     selectPreviousLanguage();

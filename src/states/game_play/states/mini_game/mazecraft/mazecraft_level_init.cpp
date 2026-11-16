@@ -1,4 +1,5 @@
 #include "states/game_play/states/minigame/mazecraft/mazecraft_level_init.hpp"
+#include "managers/input_repeat.hpp"
 #include "managers/font/font_manager.hpp"
 
 MazecraftLevelInit::MazecraftLevelInit(StateGamePlay* t_context)
@@ -66,7 +67,7 @@ void MazecraftLevelInit::render() {
 
 void MazecraftLevelInit::handleInput(const float& deltaTime) {
   const PadButtons& clicked =
-      this->stateGamePlay->context->t_engine->pad.getClicked();
+      InputRepeat_getClicked();
 
   if (clicked.Cross) {
     this->playClickSound();
