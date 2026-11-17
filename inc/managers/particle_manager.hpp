@@ -40,7 +40,9 @@ class Particle {
   Vec4 _position;
   Vec4 _direction;
 
-  Color* t_color = nullptr;
+  // Copied by value: it used to point at the block's color, and the block is
+  // deleted when broken, so particles read freed memory (random colors).
+  Color color = Color(128.0F, 128.0F, 128.0F, 128.0F);
   Vec4 uv[6] = {};
   Vec4 vertex[6] = {};
 };

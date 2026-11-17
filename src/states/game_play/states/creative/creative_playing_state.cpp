@@ -38,7 +38,8 @@ void CreativePlayingState::update(const float& deltaTime) {
                                 stateGamePlay->world->terrain);
 
   stateGamePlay->context->t_camera->setPosition(
-      *stateGamePlay->player->mesh->getPosition());
+      *stateGamePlay->player->mesh->getPosition() +
+      Vec4(0.0F, stateGamePlay->player->getCameraYOffset(), 0.0F));
   stateGamePlay->context->t_camera->setLookDirectionByPad(
       &stateGamePlay->context->t_engine->pad, deltaTime);
 
@@ -124,6 +125,10 @@ void CreativePlayingState::gamePlayInputHandler(const float& deltaTime) {
     // Set running state
     stateGamePlay->player->setRunning((bool)pressed.Square);
 
+    // Sneak with L3 (like Shift). While flying it makes you go down instead.
+    stateGamePlay->player->setSneaking((bool)pressed.L3 &&
+                                       !stateGamePlay->player->isFlying);
+
     if (clicked.L1)
       stateGamePlay->player->moveSelectorToTheLeft();
     else if (clicked.R1)
@@ -168,10 +173,10 @@ void CreativePlayingState::gamePlayInputHandler(const float& deltaTime) {
       else if (clicked.DpadDown)
         stateGamePlay->player->selectPreviousItem();
     } else if (stateGamePlay->player->isFlying) {
-      // Hold Cross (jump) or D-pad Up to go up while flying
+      // Hold Cross (jump) or D-pad Up to go up, L3 (sneak) to go down
       if (pressed.Cross || pressed.DpadUp) {
         stateGamePlay->player->flyUp(deltaTime);
-      } else if (pressed.DpadDown) {
+      } else if (pressed.L3) {
         stateGamePlay->player->flyDown(deltaTime);
       }
     }

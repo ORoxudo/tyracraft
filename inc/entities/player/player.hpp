@@ -132,6 +132,12 @@ class Player : public Entity {
   void setItemToInventory(const ItemId& itemToShift);
   void setRunning(bool _isRunning);
 
+  /** Sneak (L3): slower, lower camera, doesn't walk off block edges */
+  inline void setSneaking(bool _isSneaking) { isSneaking = _isSneaking; };
+  bool isSneaking = false;
+  /** How much the first person camera is lowered (smoothed) */
+  inline float getCameraYOffset() const { return -sneakCamOffset; };
+
   bool isOnWater();
   bool isUnderWater();
 
@@ -160,6 +166,10 @@ class Player : public Entity {
 
   float runningAcceleration = 170.0F;
   float runningMaxSpeed = 100.0F;
+
+  float sneakMaxSpeed = 18.0F;
+  float sneakCamOffset = 0.0F;
+  bool hasSupportBelow(LevelMap* t_terrain, const Vec4& feetPosition);
 
   void updateTerrainHeightAtPlayerPosition(const Vec4 nextVrticalPosition);
   TerrainHeightModel terrainHeight;

@@ -28,6 +28,10 @@ jobs:
       - name: Link engine to /tyra
         run: ln -sfn "$GITHUB_WORKSPACE/.tyra" /tyra
 
+      # Our small engine fixes (files overwrite the engine's originals)
+      - name: Apply engine patches
+        run: cp -rv engine-patches/. .tyra/
+
       - name: Build engine
         shell: bash
         run: |

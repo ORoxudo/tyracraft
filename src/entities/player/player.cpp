@@ -5,6 +5,7 @@
 #include "3libs/bvh/bvh.h"
 #include "managers/settings_manager.hpp"
 #include "utils.hpp"
+#include <cmath>
 
 using bvh::AABB;
 using bvh::AABBTree;
@@ -83,9 +84,35 @@ void Player::update(const float& deltaTime, const Vec4& movementDir,
                     Camera* t_camera, LevelMap* t_terrain) {
   isMoving = movementDir.length() > 0;
 
+  // Smoothly lower/raise the camera when sneaking
+  {
+    const float target = (isSneaking && !isFlying) ? 5.0F : 0.0F;
+    const float step = 40.0F * deltaTime;
+    if (sneakCamOffset < target)
+      sneakCamOffset = std::min(target, sneakCamOffset + step);
+    else if (sneakCamOffset > target)
+      sneakCamOffset = std::max(target, sneakCamOffset - step);
+  }
+
   if (isMoving) {
     Vec4 nextPlayerPos = getNextPosition(
         deltaTime, movementDir, t_camera->unitCirclePosition.getNormalized());
+
+    // Sneaking on the ground: don't walk off block edges. Try sliding along
+    // each axis before giving up on the move.
+    if (isSneaking && isOnGround && !isFlying && !_isOnWater &&
+        !hasSupportBelow(t_terrain, nextPlayerPos)) {
+      const Vec4 current = *mesh->getPosition();
+      const Vec4 onlyX = Vec4(nextPlayerPos.x, current.y, current.z);
+      const Vec4 onlyZ = Vec4(current.x, current.y, nextPlayerPos.z);
+
+      if (hasSupportBelow(t_terrain, onlyX))
+        nextPlayerPos = onlyX;
+      else if (hasSupportBelow(t_terrain, onlyZ))
+        nextPlayerPos = onlyZ;
+      else
+        nextPlayerPos = current;
+    }
 
     if (nextPlayerPos.collidesBox(MIN_WORLD_POS, MAX_WORLD_POS)) {
       const bool hasChangedPosition = updatePosition(deltaTime, nextPlayerPos);
@@ -134,8 +161,8 @@ void Player::update(const float& deltaTime, const Vec4& movementDir,
 }
 
 void Player::tick(LevelMap* t_terrain) {
-  // Update updateStateInWater every 5 ticks
-  if (isTicksCounterAt(5)) updateStateInWater(t_terrain);
+  // Every tick (it was every 5 ticks = 4x/s, so entering/leaving water lagged)
+  updateStateInWater(t_terrain);
 
   // Update base color after updating position
   updateItemColorByCurrentPosition();
@@ -145,8 +172,11 @@ void Player::render() { renderPip->render(t_renderer); }
 
 Vec4 Player::getNextPosition(const float& deltaTime, const Vec4& sensibility,
                              const Vec4& camDir) {
-  const float _maxSpeed = isRunning ? runningMaxSpeed : maxSpeed;
-  const float _maxAcc = isRunning ? runningAcceleration : acceleration;
+  const bool sneaking = isSneaking && !isFlying;
+  const float _maxSpeed =
+      sneaking ? sneakMaxSpeed : (isRunning ? runningMaxSpeed : maxSpeed);
+  const float _maxAcc =
+      (isRunning && !sneaking) ? runningAcceleration : acceleration;
 
   // Accelerate speed until mach max
   if (speed < _maxSpeed) {
@@ -176,13 +206,15 @@ Vec4 Player::getNextVrticalPosition(const float& deltaTime) {
   if (isFlying) {
     return *mesh->getPosition();
   } else {
-    velocity += Vec4(velocity.x, GRAVITY.y * deltaTime, velocity.z);
+    velocity += Vec4(0.0F, GRAVITY.y * deltaTime, 0.0F);
   }
 
+  // Water drag. The factors were applied once per frame, so the drag depended
+  // on the frame rate; scale them to "per 1/60 s".
   if (_isUnderWater) {
-    velocity.y *= GRAVITY_UNDER_WATER_FACTOR;
+    velocity.y *= std::pow(GRAVITY_UNDER_WATER_FACTOR, deltaTime * 60.0F);
   } else if (_isOnWater) {
-    velocity.y *= GRAVITY_ON_WATER_FACTOR;
+    velocity.y *= std::pow(GRAVITY_ON_WATER_FACTOR, deltaTime * 60.0F);
   }
 
   // Increase the position by velocity
@@ -608,13 +640,14 @@ void Player::jumpQuickly() {
 
 void Player::swim() {
   if (_isUnderWater) {
-    velocity += (lift * 0.25F);
+    // Steady swim up speed (it used to add an impulse every frame, so the
+    // result depended on the frame rate)
+    const float swimUpSpeed = lift.y * 0.45F;
+    if (velocity.y < swimUpSpeed) velocity.y = swimUpSpeed;
   } else if (_isOnWater) {
-    velocity += (lift * 0.25F);
-    _isOnWater = false;
+    // Head out of the water: a jump strong enough to climb out onto a block
+    if (velocity.y < lift.y * 0.9F) velocity.y = lift.y * 0.9F;
   }
-
-  if (velocity.y > lift.y) velocity.y = lift.y;
 
   isOnGround = false;
 }
@@ -696,8 +729,10 @@ void Player::updateStateInWater(LevelMap* terrain) {
   bbox.getMinMax(&min, &max);
   mid = ((max - min) / 2) + min;
 
-  bottom.set(mid.x, min.y, mid.z);
-  top.set(mid.x, max.y + 6.0F, mid.z);
+  // Feet: slightly above the bottom so it's inside the feet block.
+  // Eyes: slightly below the top of the head.
+  bottom.set(mid.x, min.y + 2.0F, mid.z);
+  top.set(mid.x, max.y - 4.0F, mid.z);
 
   auto blockBottom =
       static_cast<Blocks>(getBlockByWorldPosition(terrain, &bottom));
@@ -715,6 +750,18 @@ void Player::updateStateInWater(LevelMap* terrain) {
   }
 
   // printf("isOnWater: %i | isUnderWater: %i\n", _isOnWater, _isUnderWater);
+}
+
+bool Player::hasSupportBelow(LevelMap* t_terrain, const Vec4& feetPosition) {
+  // A point a bit below the feet is inside the block the player stands on
+  Vec4 below = Vec4(feetPosition.x, feetPosition.y - 4.0F, feetPosition.z);
+  const Blocks type =
+      static_cast<Blocks>(getBlockByWorldPosition(t_terrain, &below));
+
+  return !(type == Blocks::AIR_BLOCK || type == Blocks::VOID ||
+           type == Blocks::WATER_BLOCK || type == Blocks::LAVA_BLOCK ||
+           type == Blocks::TORCH || type == Blocks::GRASS ||
+           type == Blocks::POPPY_FLOWER || type == Blocks::DANDELION_FLOWER);
 }
 
 bool Player::isOnWater() { return _isOnWater; }

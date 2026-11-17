@@ -3,6 +3,7 @@
 #include "math3d.h"
 #include "utils.hpp"
 #include "managers/collision_manager.hpp"
+#include <algorithm>
 
 using bvh::AABB;
 using bvh::AABBTree;
@@ -143,7 +144,7 @@ void ParticlesManager::updateParticles(const float deltaTime,
         particles[i].vertex[j] = particles[i].model * rawData[j];
       }
 
-      colors.insert(colors.end(), 6, *particles[i].t_color);
+      colors.insert(colors.end(), 6, particles[i].color);
       vertex.insert(vertex.end(), std::begin(particles[i].vertex),
                     std::end(particles[i].vertex));
       uv.insert(uv.end(), std::begin(particles[i].uv),
@@ -234,7 +235,15 @@ void ParticlesManager::createBlockParticle(Block* block) {
   particle.uv[4] = Vec4(xMin, yMin, 1.0F, 0.0F) * scaleVec;
   particle.uv[5] = Vec4(xMax, yMin, 1.0F, 0.0F) * scaleVec;
 
-  particle.t_color = &block->baseColor;
+  // Block light color, kept in a sane range: 128 is "normal" brightness on
+  // the PS2 GS, so never overbright, and never almost black.
+  const float MIN_LIGHT = 48.0F;
+  const float MAX_LIGHT = 128.0F;
+  const Color& base = block->baseColor;
+  particle.color.set(std::min(MAX_LIGHT, std::max(MIN_LIGHT, base.r)),
+                     std::min(MAX_LIGHT, std::max(MIN_LIGHT, base.g)),
+                     std::min(MAX_LIGHT, std::max(MIN_LIGHT, base.b)),
+                     128.0F);
 };
 
 void ParticlesManager::renderBlocksParticles() {
@@ -252,7 +261,9 @@ void ParticlesManager::renderBlocksParticles() {
   infoBag.textureMappingType = Tyra::PipelineTextureMappingType::TyraNearest;
 
   StaPipColorBag colorBag;
-  colorBag.single = colors.data();
+  // One color per vertex (it used `single`, so every particle got the color
+  // of the first one in the list).
+  colorBag.many = colors.data();
 
   StaPipBag bag;
   bag.count = vertex.size();

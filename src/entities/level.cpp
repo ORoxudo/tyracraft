@@ -1,4 +1,5 @@
 #include "entities/level.hpp"
+#include <cmath>
 
 static Level level;
 
@@ -231,10 +232,19 @@ bool BoundCheckMap(LevelMap* map, uint16_t x, uint16_t y, uint16_t z) {
 }
 
 uint8_t getBlockByWorldPosition(LevelMap* map, Vec4* pos) {
+  // Blocks are centered on offset * DUBLE_BLOCK_SIZE (they span +-half a
+  // block), so round to the nearest offset. Truncating shifted the lookup by
+  // half a block: e.g. standing next to a wall with water behind it counted
+  // as being in water.
   Vec4 result = *pos / (DUBLE_BLOCK_SIZE);
-  auto x = static_cast<uint16_t>(result.x);
-  auto y = static_cast<uint16_t>(result.y);
-  auto z = static_cast<uint16_t>(result.z);
+  const float fx = std::floor(result.x + 0.5F);
+  const float fy = std::floor(result.y + 0.5F);
+  const float fz = std::floor(result.z + 0.5F);
+  if (fx < 0 || fy < 0 || fz < 0) return 0;
+
+  auto x = static_cast<uint16_t>(fx);
+  auto y = static_cast<uint16_t>(fy);
+  auto z = static_cast<uint16_t>(fz);
 
   return BoundCheckMap(map, x, y, z) ? GetBlockFromMap(map, x, y, z) : 0;
 }

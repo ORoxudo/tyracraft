@@ -412,7 +412,7 @@ void Pig::updateStateInWater(LevelMap* terrain, Vec4* min, Vec4* max) {
   Vec4 mid, top, bottom;
   mid = ((*max - *min) / 2) + *min;
 
-  bottom.set(mid.x, min->y, mid.z);
+  bottom.set(mid.x, min->y + 2.0F, mid.z);
   top.set(mid.x, max->y + 6.0F, mid.z);
 
   auto blockBottom =
