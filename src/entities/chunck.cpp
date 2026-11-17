@@ -65,6 +65,11 @@ void Chunck::updateSurroundingBlocks() {
     for (s8 _y = -1; _y <= 1; _y++) {
       for (s8 _z = -2; _z <= 2; _z++) {
         Vec4 _bOffset = camOffset + Vec4(_x, _y, _z);
+
+        // Skip offsets outside this chunk: getBlockById() is a linear search
+        // over all chunk blocks and would scan everything for nothing.
+        if (!containsBlock(&_bOffset)) continue;
+
         u32 blockIndex = getIndexByOffset(_bOffset.x, _bOffset.y, _bOffset.z);
         Block* t_block = getBlockById(blockIndex);
 
@@ -169,96 +174,59 @@ void Chunck::rendererTransparentData(Renderer* t_renderer,
 void Chunck::renderSolidPartialBlocks(Renderer* t_renderer,
                                       StaticPipeline* stapip,
                                       BlockManager* t_blockManager) {
-  for (size_t i = 0; i < surroundingBlocks.size(); i++) {
-    Block* t_block = surroundingBlocks[i];
-    const auto start = t_block->drawDataIndex;
-    const auto end = (t_block->drawDataIndex + t_block->drawDataLength);
-
-    //------------------------
-    // Temp clipped draw data
-    //------------------------
-    std::vector<Vec4> inVertices;
-    std::vector<Vec4> inUVMap;
-    std::vector<Color> inColors;
-
-    inVertices.reserve(t_block->drawDataLength);
-    inUVMap.reserve(t_block->drawDataLength);
-    inColors.reserve(t_block->drawDataLength);
-
-    std::copy(vertices.begin() + start, vertices.begin() + end,
-              std::back_inserter(inVertices));
-    std::copy(uvMap.begin() + start, uvMap.begin() + end,
-              std::back_inserter(inUVMap));
-    std::copy(verticesColors.begin() + start, verticesColors.begin() + end,
-              std::back_inserter(inColors));
-
-    // t_renderer->renderer3D.utility.drawBBox(*t_block->bbox, Color(255, 0,
-    // 0));
-    renderPartialBlockDrawData(t_renderer, false, stapip, t_blockManager, inVertices,
-                               inUVMap, inColors);
-  }
+  renderPartialBlocks(t_renderer, false, stapip, t_blockManager,
+                      surroundingBlocks, vertices, uvMap, verticesColors);
 }
 
 void Chunck::renderTransparentPartialBlocks(Renderer* t_renderer,
                                             StaticPipeline* stapip,
                                             BlockManager* t_blockManager) {
-  for (size_t i = 0; i < surroundingTransparentBlocks.size(); i++) {
-    Block* t_block = surroundingTransparentBlocks[i];
-    const auto start = t_block->drawDataIndex;
-    const auto end = (t_block->drawDataIndex + t_block->drawDataLength);
-
-    //------------------------
-    // Temp clipped draw data
-    //------------------------
-    std::vector<Vec4> inVertices;
-    std::vector<Vec4> inUVMap;
-    std::vector<Color> inColors;
-
-    inVertices.reserve(t_block->drawDataLength);
-    inUVMap.reserve(t_block->drawDataLength);
-    inColors.reserve(t_block->drawDataLength);
-
-    std::copy(verticesWithTransparency.begin() + start,
-              verticesWithTransparency.begin() + end,
-              std::back_inserter(inVertices));
-    std::copy(uvMapWithTransparency.begin() + start,
-              uvMapWithTransparency.begin() + end, std::back_inserter(inUVMap));
-    std::copy(verticesColorsWithTransparency.begin() + start,
-              verticesColorsWithTransparency.begin() + end,
-              std::back_inserter(inColors));
-
-    // t_renderer->renderer3D.utility.drawBBox(*t_block->bbox, Color(0, 0,
-    // 255));
-    renderPartialBlockDrawData(t_renderer, true, stapip, t_blockManager, inVertices,
-                               inUVMap, inColors);
-  }
+  renderPartialBlocks(t_renderer, true, stapip, t_blockManager,
+                      surroundingTransparentBlocks, verticesWithTransparency,
+                      uvMapWithTransparency, verticesColorsWithTransparency);
 }
 
-void Chunck::renderPartialBlockDrawData(Renderer* t_renderer,
-                                        u8 hasTransparency,
-                                        StaticPipeline* stapip,
-                                        BlockManager* t_blockManager,
-                                        std::vector<Vec4>& in_vertex,
-                                        std::vector<Vec4>& in_uv,
-                                        std::vector<Color>& in_colors) {
+void Chunck::renderPartialBlocks(Renderer* t_renderer, u8 hasTransparency,
+                                 StaticPipeline* stapip,
+                                 BlockManager* t_blockManager,
+                                 const std::vector<Block*>& t_blocks,
+                                 const std::vector<Vec4>& srcVertices,
+                                 const std::vector<Vec4>& srcUVs,
+                                 const std::vector<Color>& srcColors) {
+  // Shared scratch buffers: rendering is single threaded and the pipeline
+  // consumes the data inside render(), so they can be reused every call
+  // without allocating again once they've grown.
+  static std::vector<Vec4> outVertices;
+  static std::vector<Vec4> outUVMap;
+  static std::vector<Color> outColors;
+
+  outVertices.clear();
+  outUVMap.clear();
+  outColors.clear();
+
+  Plane* frustumPlanes =
+      (Plane*)t_renderer->core.renderer3D.frustumPlanes.getAll();
+  const size_t total = srcVertices.size();
+
+  for (size_t i = 0; i < t_blocks.size(); i++) {
+    const Block* t_block = t_blocks[i];
+    const size_t start = t_block->drawDataIndex;
+    size_t count = t_block->drawDataLength;
+
+    if (start >= total) continue;
+    if (start + count > total) count = total - start;
+
+    ClippingManager_ClipMesh(&srcVertices[start], &srcUVs[start],
+                             &srcColors[start], count, outVertices, outUVMap,
+                             outColors, frustumPlanes, camPositon);
+  }
+
+  if (outVertices.empty()) return;
+
   StaPipTextureBag textureBag;
   StaPipInfoBag infoBag;
   StaPipColorBag colorBag;
   StaPipBag bag;
-
-  std::vector<Vec4> outVertices;
-  std::vector<Vec4> outUVMap;
-  std::vector<Color> outColors;
-
-  outVertices.reserve(in_vertex.size());
-  outUVMap.reserve(in_vertex.size());
-  outColors.reserve(in_vertex.size());
-
-  u8 generatedVertexCounter =
-      ClippingManager_ClipMesh(in_vertex, in_uv, in_colors, outVertices,
-                               outUVMap, outColors, t_renderer, camPositon);
-
-  if (generatedVertexCounter == 0) return;
 
   textureBag.coordinates = outUVMap.data();
   textureBag.texture = t_blockManager->getBlocksTexture();

@@ -189,10 +189,12 @@ class Chunck {
                                       StaticPipeline* stapip,
                                       BlockManager* t_blockManager);
 
-  void renderPartialBlockDrawData(Renderer* t_renderer, u8 hasTransparency,
-                                  StaticPipeline* stapip,
-                                  BlockManager* t_blockManager,
-                                  std::vector<Vec4>& in_vertex,
-                                  std::vector<Vec4>& in_uv,
-                                  std::vector<Color>& in_colors);
+  /** Clips the given near-camera blocks and draws them in one call */
+  void renderPartialBlocks(Renderer* t_renderer, u8 hasTransparency,
+                           StaticPipeline* stapip,
+                           BlockManager* t_blockManager,
+                           const std::vector<Block*>& t_blocks,
+                           const std::vector<Vec4>& srcVertices,
+                           const std::vector<Vec4>& srcUVs,
+                           const std::vector<Color>& srcColors);
 };

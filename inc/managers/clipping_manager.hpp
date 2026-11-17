@@ -15,94 +15,63 @@ using Tyra::RendererSettings;
 using Tyra::Vec4;
 
 /**
- * @brief Clip mesh data
+ * @brief Clips `count` vertices (whole triangles) against the frustum and
+ * APPENDS the result to the out vectors. Works directly on the source arrays
+ * (no copies) and reuses an internal scratch buffer, so it doesn't allocate
+ * per call once the vectors have grown.
  *
- * @param in_vertex
- * @param in_uv
- * @param in_colors
- * @return int
+ * @return number of vertices appended
  */
-int ClippingManager_ClipMesh(std::vector<Vec4>& in_vertex,
-                             std::vector<Vec4>& in_uv,
-                             std::vector<Color>& in_colors,
-                             std::vector<Vec4>& out_vertex,
-                             std::vector<Vec4>& out_uv,
-                             std::vector<Color>& out_colors,
-                             Renderer* t_renderer, Vec4& camPos) {
-  Plane* frustumPlanes =
-      (Plane*)t_renderer->core.renderer3D.frustumPlanes.getAll();
+inline int ClippingManager_ClipMesh(const Vec4* vert, const Vec4* sts,
+                                    const Color* in_colors, const u32 count,
+                                    std::vector<Vec4>& out_vertex,
+                                    std::vector<Vec4>& out_uv,
+                                    std::vector<Color>& out_colors,
+                                    Plane* frustumPlanes, const Vec4& camPos) {
+  static std::vector<PlanesClipVertex> clippedTriangle;
+  static CustomPlanesClipAlgorithm algorithm;
 
   EEClipAlgorithmSettings algoSettings;
-  algoSettings = {false, in_uv.size() > 0, in_colors.size() > 0};
+  algoSettings = {false, sts != nullptr, in_colors != nullptr};
 
-  CustomPlanesClipAlgorithm algorithm;
-
-  int result = 0;
-
+  Vec4 camPosCopy = camPos;
   Vec4 inputVerts[3];
   std::array<PlanesClipVertexPtrs, 3> inputTriangle;
 
-  std::vector<PlanesClipVertex> clippedTriangle;
-  std::vector<PlanesClipVertex> clippedVertices;
-  // clippedVertices.reserve(9);
+  // The clip algorithm takes non-const pointers but doesn't write to them
+  Vec4* uv = const_cast<Vec4*>(sts);
+  Vec4* colors = reinterpret_cast<Vec4*>(const_cast<Color*>(in_colors));
 
-  Vec4* vert = in_vertex.data();
-  Vec4* sts = in_uv.data();
-  Vec4* colors = reinterpret_cast<Vec4*>(in_colors.data());
+  int result = 0;
 
-  // Iterate over the input vertices per triangles
-  for (u32 i = 0; i < in_vertex.size() / 3; i++) {
-    // Iterate over the triangles
+  for (u32 i = 0; i < count / 3; i++) {
     for (u8 j = 0; j < 3; j++) {
       inputVerts[j] = vert[i * 3 + j];
-
-      inputTriangle[j] = {&inputVerts[j],
-
-                          // Normals used with dir light
-                          nullptr,
-
-                          // UV
-                          &sts[i * 3 + j],
-
-                          // Colors
+      inputTriangle[j] = {&inputVerts[j], nullptr, &uv[i * 3 + j],
                           &colors[i * 3 + j]};
     }
 
     if (
         // Back face culling
-        !Vec4::shouldBeBackfaceCulled(&camPos, &inputVerts[0], &inputVerts[1],
-                                      &inputVerts[2]) ||
-
-        // Check if the triangle is partially visible
+        !Vec4::shouldBeBackfaceCulled(&camPosCopy, &inputVerts[0],
+                                      &inputVerts[1], &inputVerts[2]) ||
+        // Only triangles crossing the frustum need clipping
         Utils::FrustumTriangleIntersect(frustumPlanes, inputVerts[0],
                                         inputVerts[1], inputVerts[2]) !=
             Tyra::CoreBBoxFrustum::PARTIALLY_IN_FRUSTUM) {
       continue;
     }
 
-    int clippedVertivesCount = algorithm.clip(
+    const int clippedCount = algorithm.clip(
         clippedTriangle, inputTriangle.data(), algoSettings, frustumPlanes);
+    if (clippedCount == 0) continue;
 
-    if (clippedVertivesCount == 0) {
-      continue;
-    }
+    result += clippedCount;
 
-    result += clippedVertivesCount;
-
-    for (size_t j = 0; j < clippedTriangle.size(); j++) {
-      clippedVertices.push_back(clippedTriangle[j]);
-    }
-  }
-
-  if (clippedVertices.size() > 0) {
-    out_vertex.reserve(clippedVertices.size());
-    out_uv.reserve(clippedVertices.size());
-    out_colors.reserve(clippedVertices.size());
-
-    for (u32 i = 0; i < clippedVertices.size(); i++) {
-      out_vertex.emplace_back(clippedVertices[i].position);
-      out_uv.emplace_back(clippedVertices[i].st);
-      out_colors.emplace_back(clippedVertices[i].color.xyzw);
+    for (size_t k = 0; k < clippedTriangle.size(); k++) {
+      out_vertex.emplace_back(clippedTriangle[k].position);
+      out_uv.emplace_back(clippedTriangle[k].st);
+      out_colors.emplace_back(clippedTriangle[k].color.xyzw);
     }
   }
 

@@ -15,7 +15,10 @@ DEPEXT      := d
 OBJEXT      := o
 
 #Flags, Libraries and Includes
-CFLAGS      := -O3 -G0
+# NDEBUG strips TYRA_LOG/TYRA_ASSERT (string building + printf) from the game
+# code. Only the game: the engine lib is built separately, without it, since
+# it runs init code inside TYRA_ASSERT().
+CFLAGS      := -O3 -G0 -DNDEBUG
 # LINKFLAGS	:= --only-keep-debug
 LIB         := -ltyra
 LIBDIRS     := -L$(ENGINEDIR)/bin

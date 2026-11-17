@@ -38,7 +38,14 @@ int CustomPlanesClipAlgorithm::clip(std::vector<PlanesClipVertex>& o_vertices,
                                     PlanesClipVertexPtrs* i_vertices,
                                     const EEClipAlgorithmSettings& settings,
                                     Plane* frustumPlanes) {
-  std::list<Triangle> trianglesToClip;
+  // Ping-pong fixed buffers instead of a std::list (one heap allocation per
+  // triangle, for every clipped triangle, every frame). Each of the 4 planes
+  // can at most double the triangle count: 1 -> 16.
+  constexpr int MAX_TRIANGLES = 16;
+  static Triangle bufferA[MAX_TRIANGLES];
+  static Triangle bufferB[MAX_TRIANGLES];
+  Triangle* current = bufferA;
+  Triangle* next = bufferB;
   PlanesClipVertex tempVertices[6] = {};
 
   Triangle initialInput;
@@ -58,43 +65,39 @@ int CustomPlanesClipAlgorithm::clip(std::vector<PlanesClipVertex>& o_vertices,
   if (settings.lerpNormals) initialInput.c.normal = *i_vertices[2].normal;
   if (settings.lerpTexCoords) initialInput.c.st = *i_vertices[2].st;
 
-  trianglesToClip.push_back(initialInput);
+  current[0] = initialInput;
   int nNewTriangles = 1;
 
   // Check against left, right, top and bottom planes
   for (u8 i = 0; i < 4; i++) {
-    u8 clipped = 0;
+    int nextCount = 0;
 
-    while (nNewTriangles > 0) {
-      Triangle input = trianglesToClip.front();
-      trianglesToClip.pop_front();
-      nNewTriangles--;
+    for (int k = 0; k < nNewTriangles; k++) {
+      const u8 clipped = clipAgainstPlane(current[k], tempVertices, settings,
+                                          &frustumPlanes[i]);
 
-      clipped =
-          clipAgainstPlane(input, tempVertices, settings, &frustumPlanes[i]);
-
-      if (clipped == 0) {
-        continue;
-      } else if (clipped == 1) {
-        trianglesToClip.emplace_back(tempVertices[0], tempVertices[1],
-                                     tempVertices[2]);
-      } else if (clipped == 2) {
-        trianglesToClip.emplace_back(tempVertices[0], tempVertices[1],
-                                     tempVertices[2]);
-
-        trianglesToClip.emplace_back(tempVertices[3], tempVertices[4],
-                                     tempVertices[5]);
+      if (clipped >= 1 && nextCount < MAX_TRIANGLES) {
+        next[nextCount++] =
+            Triangle(tempVertices[0], tempVertices[1], tempVertices[2]);
+      }
+      if (clipped == 2 && nextCount < MAX_TRIANGLES) {
+        next[nextCount++] =
+            Triangle(tempVertices[3], tempVertices[4], tempVertices[5]);
       }
     }
 
-    nNewTriangles = trianglesToClip.size();
+    Triangle* swap = current;
+    current = next;
+    next = swap;
+    nNewTriangles = nextCount;
   }
 
   o_vertices.resize(nNewTriangles * 3, {Vec4(0, 0, 0), Vec4(0, 0, 0),
                                         Vec4(0, 0, 0), Vec4(0, 0, 0)});
 
   int i = 0;
-  for (auto& t : trianglesToClip) {
+  for (int k = 0; k < nNewTriangles; k++) {
+    const Triangle& t = current[k];
     o_vertices[i].position = t.a.position;
     if (settings.lerpColors) o_vertices[i].color = t.a.color;
     if (settings.lerpNormals) o_vertices[i].normal = t.a.normal;

@@ -64,15 +64,48 @@ void FontManager_init(Renderer* t_renderer) {
 //   FontManager_printText(text.c_str(), text.length(), options);
 // };
 
+/**
+ * Fast UTF-8 -> wchar_t decoder into a reused buffer. std::wstring_convert
+ * (constructed on every text print, every frame) was very expensive on the
+ * PS2. The font only has 256 glyphs, so anything above U+00FF becomes '?'.
+ */
+static const std::wstring& FontManager_decodeUtf8(const char* s) {
+  static std::wstring buffer;
+  buffer.clear();
+
+  const unsigned char* p = reinterpret_cast<const unsigned char*>(s);
+  while (*p) {
+    unsigned int cp;
+    if (*p < 0x80) {
+      cp = *p++;
+    } else if ((*p & 0xE0) == 0xC0 && (p[1] & 0xC0) == 0x80) {
+      cp = ((p[0] & 0x1F) << 6) | (p[1] & 0x3F);
+      p += 2;
+    } else if ((*p & 0xF0) == 0xE0 && (p[1] & 0xC0) == 0x80 &&
+               (p[2] & 0xC0) == 0x80) {
+      cp = ((p[0] & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
+      p += 3;
+    } else if ((*p & 0xF8) == 0xF0 && (p[1] & 0xC0) == 0x80 &&
+               (p[2] & 0xC0) == 0x80 && (p[3] & 0xC0) == 0x80) {
+      cp = '?';
+      p += 4;
+    } else {
+      cp = '?';  // invalid byte
+      p++;
+    }
+    buffer.push_back(static_cast<wchar_t>(cp > 0xFF ? '?' : cp));
+  }
+
+  return buffer;
+}
+
 void FontManager_printText(const char* text, const FontOptions& options) {
-  std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-  std::wstring tempWstr = converter.from_bytes(text, text + strlen(text));
+  const std::wstring& tempWstr = FontManager_decodeUtf8(text);
   FontManager_printText(tempWstr.c_str(), tempWstr.length(), options);
 }
 
 void FontManager_printText(const char* text, const float& x, const float& y) {
-  std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-  std::wstring tempWstr = converter.from_bytes(text, text + strlen(text));
+  const std::wstring& tempWstr = FontManager_decodeUtf8(text);
   FontManager_printText(tempWstr.c_str(), tempWstr.length(),
                         FontOptions(Vec2(x, y)));
 }
@@ -173,8 +206,7 @@ const Sprite* FontManager_getFontChatByCode(const u8& code) {
 
 // UTF-8
 std::wstring FontManager_utf8_to_wstring(const std::string& str) {
-  std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-  return converter.from_bytes(str);
+  return FontManager_decodeUtf8(str.c_str());
 }
 
 size_t FontManager_utf8len(char* s) {
@@ -186,13 +218,13 @@ size_t FontManager_utf8len(char* s) {
 
 void FontManager_printText(const std::string& text,
                            const FontOptions& options) {
-  std::wstring tempWstr = FontManager_utf8_to_wstring(text);
+  const std::wstring& tempWstr = FontManager_decodeUtf8(text.c_str());
   FontManager_printText(tempWstr.c_str(), tempWstr.length(), options);
 };
 
 void FontManager_printText(const std::string& text, const float& x,
                            const float& y) {
-  std::wstring tempWstr = FontManager_utf8_to_wstring(text);
+  const std::wstring& tempWstr = FontManager_decodeUtf8(text.c_str());
   FontManager_printText(tempWstr.c_str(), tempWstr.size(),
                         FontOptions(Vec2(x, y)));
 }
