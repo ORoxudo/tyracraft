@@ -873,6 +873,7 @@ void CrossCraft_WorldGenerator_Generate_Woods(LevelMap* map) {
   delete[] heightMap;
 }
 
+// Classic superflat: 1 bedrock, 2 dirt, 1 grass block, no plants.
 void CrossCraft_WorldGenerator_Generate_Flat(LevelMap* map) {
   for (uint16_t x = 0; x < map->length; x++) {
     for (uint16_t z = 0; z < map->width; z++) {
@@ -881,15 +882,9 @@ void CrossCraft_WorldGenerator_Generate_Flat(LevelMap* map) {
 
         if (y == 0) {
           block_type = static_cast<uint8_t>(Blocks::BEDROCK_BLOCK);
-        } else if (y == 1) {
-          block_type = rand() % 2 == 0
-                           ? static_cast<uint8_t>(Blocks::BEDROCK_BLOCK)
-                           : static_cast<uint8_t>(Blocks::STONE_BLOCK);
-        } else if (y <= 28) {
-          block_type = static_cast<uint8_t>(Blocks::STONE_BLOCK);
-        } else if (y <= 31) {
+        } else if (y <= 2) {
           block_type = static_cast<uint8_t>(Blocks::DIRTY_BLOCK);
-        } else if (y <= 32) {
+        } else if (y == 3) {
           block_type = static_cast<uint8_t>(Blocks::GRASS_BLOCK);
         }
 
@@ -897,12 +892,4 @@ void CrossCraft_WorldGenerator_Generate_Flat(LevelMap* map) {
       }
     }
   }
-
-  int16_t* heightMap = new int16_t[map->length * map->width];
-
-  for (int i = 0; i < map->length * map->width; i++) {
-    heightMap[i] = 32;
-  }
-  create_plants(map, heightMap, 0);
-  delete[] heightMap;
 }

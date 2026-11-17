@@ -184,6 +184,7 @@ class World {
   void updateNeighBorsChunksByAddedBlock(Vec4* offset);
   void addChunkToLoadAsync(Chunck* t_chunck);
   void addChunkToUnloadAsync(Chunck* t_chunck);
+  void cancelChunkUnload(Chunck* t_chunck);
   void updateLightModel();
   void sortChunksToLoad(const Vec4& currentPlayerPos);
 

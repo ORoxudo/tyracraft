@@ -37,7 +37,7 @@ using Tyra::StaPipTextureBag;
 using Tyra::StaticPipeline;
 using Tyra::Vec4;
 
-enum class ChunkState { PreLoaded, Loaded, Loading, Clean };
+enum class ChunkState { PreLoaded, Loaded, Loading, Clean, Unloading };
 
 class Chunck {
  public:
@@ -168,8 +168,11 @@ class Chunck {
 
   u8 _isDrawDataLoaded = false;
   u8 _isMemoryReserved = false;
-  u8 _loaderBatchCounter = 0;
-  u8 _unloaderBatchCounter = 0;
+  // u16: a chunk has up to 512 blocks; u8 wrapped at 255, making async
+  // loading loop forever (memory blow-up) and async unloading re-delete
+  // already freed blocks (crash).
+  u16 _loaderBatchCounter = 0;
+  u16 _unloaderBatchCounter = 0;
 
   Vec4 camPositon = Vec4(0, 0, 0);
   s8 _distanceFromPlayerInChunks = -1;

@@ -329,10 +329,13 @@ void World::scheduleChunksNeighbors(Chunck* origin_chunk,
       t_chunk->setDistanceFromPlayerInChunks(-1);
     } else {
       if (force_loading) {
+        cancelChunkUnload(t_chunk);
         t_chunk->clear();
         buildChunk(t_chunk);
-      } else if (t_chunk->state == ChunkState::Clean) {
-        addChunkToLoadAsync(t_chunk);
+      } else {
+        // Came back into range while queued/being unloaded
+        cancelChunkUnload(t_chunk);
+        if (t_chunk->state == ChunkState::Clean) addChunkToLoadAsync(t_chunk);
       }
 
       t_chunk->setDistanceFromPlayerInChunks(distance);
@@ -467,10 +470,31 @@ void World::addChunkToUnloadAsync(Chunck* t_chunck) {
 
   // Avoid unload and load the same chunk at the same time
   for (size_t i = 0; i < tempChuncksToLoad.size(); i++)
-    if (tempChuncksToLoad[i]->id == t_chunck->id)
+    if (tempChuncksToLoad[i]->id == t_chunck->id) {
       tempChuncksToLoad.erase(tempChuncksToLoad.begin() + i);
+      break;
+    }
 
   tempChuncksToUnLoad.push_front(t_chunck);
+}
+
+void World::cancelChunkUnload(Chunck* t_chunck) {
+  u8 wasQueued = false;
+  for (size_t i = 0; i < tempChuncksToUnLoad.size(); i++)
+    if (tempChuncksToUnLoad[i]->id == t_chunck->id) {
+      tempChuncksToUnLoad.erase(tempChuncksToUnLoad.begin() + i);
+      wasQueued = true;
+      break;
+    }
+
+  // A chunk that already started unloading has freed some blocks, and one
+  // that was removed from the load queue is half built: finish clearing it
+  // so it can be loaded again from scratch.
+  if (t_chunck->state == ChunkState::Unloading ||
+      (wasQueued && t_chunck->state != ChunkState::Loaded &&
+       t_chunck->state != ChunkState::Clean)) {
+    t_chunck->clear();
+  }
 }
 
 void World::updateLightModel() {

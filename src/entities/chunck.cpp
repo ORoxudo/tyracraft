@@ -295,6 +295,9 @@ void Chunck::clear() {
   blocksCount = 0;
 
   for (u16 i = 0; i < blocks.size(); i++) {
+    // May already be freed by an interrupted clearAsync()
+    if (!blocks[i]) continue;
+
     g_AABBTree->remove(blocks[i]->tree_index);
 
     delete blocks[i];
@@ -304,6 +307,7 @@ void Chunck::clear() {
   blocks.clear();
   blocks.shrink_to_fit();
   _isPreAllocated = false;
+  _unloaderBatchCounter = 0;
 
   surroundingBlocks.clear();
   surroundingBlocks.shrink_to_fit();
@@ -317,11 +321,23 @@ void Chunck::clear() {
 }
 
 void Chunck::clearAsync() {
+  if (state != ChunkState::Unloading) {
+    // From now on blocks get freed in batches: stop rendering, updating and
+    // reading this chunk's blocks so nothing touches freed memory.
+    state = ChunkState::Unloading;
+    _isDrawDataLoaded = false;
+    surroundingBlocks.clear();
+    surroundingTransparentBlocks.clear();
+    _unloaderBatchCounter = 0;
+  }
+
   size_t counter = 0;
   for (size_t i = _unloaderBatchCounter; i < blocks.size(); i++) {
-    g_AABBTree->remove(blocks[i]->tree_index);
-    delete blocks[i];
-    blocks[i] = nullptr;
+    if (blocks[i]) {
+      g_AABBTree->remove(blocks[i]->tree_index);
+      delete blocks[i];
+      blocks[i] = nullptr;
+    }
 
     if (counter >= UNLOAD_CHUNK_BATCH) {
       _unloaderBatchCounter = i + 1;
@@ -403,7 +419,8 @@ void Chunck::loadDrawDataWithoutSorting() {
           blocks[i], &verticesWithTransparency, &verticesColorsWithTransparency,
           &uvMapWithTransparency, t_worldLightModel, t_terrain);
 
-      blocks[i]->drawDataLength = blocks[i]->visibleFacesCount * 6;
+      blocks[i]->drawDataLength =
+          verticesWithTransparency.size() - blocks[i]->drawDataIndex;
 
       // printf("Transparent Block %i\n", (int)i);
       // printf("drawDataIndex %i | drawDataLength %i \n\n",
@@ -415,7 +432,8 @@ void Chunck::loadDrawDataWithoutSorting() {
       MeshBuilder_BuildMesh(blocks[i], &vertices, &verticesColors, &uvMap,
                             t_worldLightModel, t_terrain);
 
-      blocks[i]->drawDataLength = blocks[i]->visibleFacesCount * 6;
+      blocks[i]->drawDataLength =
+          vertices.size() - blocks[i]->drawDataIndex;
 
       // printf("Block %i\n", (int)i);
       // printf("drawDataIndex %i | drawDataLength %i \n\n",
@@ -448,14 +466,16 @@ void Chunck::loadDrawDataAsync() {
           blocks[i], &verticesWithTransparency, &verticesColorsWithTransparency,
           &uvMapWithTransparency, t_worldLightModel, t_terrain);
 
-      blocks[i]->drawDataLength = blocks[i]->visibleFacesCount * 6;
+      blocks[i]->drawDataLength =
+          verticesWithTransparency.size() - blocks[i]->drawDataIndex;
     } else {
       blocks[i]->drawDataIndex = vertices.size();
 
       MeshBuilder_BuildMesh(blocks[i], &vertices, &verticesColors, &uvMap,
                             t_worldLightModel, t_terrain);
 
-      blocks[i]->drawDataLength = blocks[i]->visibleFacesCount * 6;
+      blocks[i]->drawDataLength =
+          vertices.size() - blocks[i]->drawDataIndex;
     }
 
     if (counter >= LOAD_CHUNK_BATCH) {
@@ -473,6 +493,11 @@ void Chunck::loadDrawDataAsync() {
 void Chunck::loadDrawData() { loadDrawDataWithoutSorting(); }
 
 void Chunck::reloadLightData() {
+  // Only rebuild colors for chunks that currently have draw data: otherwise
+  // the color arrays would be filled without vertices and be misaligned
+  // once the mesh is built, and unloading chunks have freed blocks.
+  if (state != ChunkState::Loaded || !isDrawDataLoaded()) return;
+
   verticesColors.clear();
   verticesColorsWithTransparency.clear();
 
@@ -497,6 +522,7 @@ void Chunck::updateFrustumCheck(const Plane* frustumPlanes) {
 
 Block* Chunck::getBlockByPosition(const Vec4* pos) {
   for (size_t i = 0; i < blocks.size(); i++) {
+    if (!blocks[i]) continue;
     const auto bPos = blocks[i]->position;
     if (bPos.x == pos->x && bPos.y == pos->y && bPos.z == pos->z)
       return blocks[i];
@@ -506,6 +532,7 @@ Block* Chunck::getBlockByPosition(const Vec4* pos) {
 
 Block* Chunck::getBlockByOffset(const Vec4* offset) {
   for (size_t i = 0; i < blocks.size(); i++) {
+    if (!blocks[i]) continue;
     Vec4 _tempBlockOffset;
     GetXYZFromPos(&blocks[i]->offset, &_tempBlockOffset);
 
@@ -518,7 +545,7 @@ Block* Chunck::getBlockByOffset(const Vec4* offset) {
 
 Block* Chunck::getBlockById(const u32 blockId) {
   for (size_t i = 0; i < blocks.size(); i++) {
-    if (blocks[i]->index == blockId) return blocks[i];
+    if (blocks[i] && blocks[i]->index == blockId) return blocks[i];
   }
   return nullptr;
 }
@@ -526,7 +553,7 @@ Block* Chunck::getBlockById(const u32 blockId) {
 void Chunck::removeBlock(Block* target) {
   blocks.erase(
       std::remove_if(blocks.begin(), blocks.end(),
-                     [target](Block* b) { return b->index == target->index; }),
+                     [target](Block* b) { return b && b->index == target->index; }),
       blocks.end());
   g_AABBTree->remove(target->tree_index);
   delete target;
