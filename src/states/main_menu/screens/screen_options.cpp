@@ -44,6 +44,7 @@ void ScreenOptions::render() {
   {
     FontOptions fontOptions;
     fontOptions.scale = 0.8F;
+    fontOptions.maxWidth = SLOT_WIDTH - 20;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == OptionsScreenOptions::VSyncOnOff
@@ -60,6 +61,7 @@ void ScreenOptions::render() {
     baseY += 40;
     FontOptions fontOptions;
     fontOptions.scale = 0.8F;
+    fontOptions.maxWidth = SLOT_WIDTH - 20;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == OptionsScreenOptions::ReverseCamY
@@ -73,6 +75,7 @@ void ScreenOptions::render() {
     baseY += 40;
     FontOptions fontOptions;
     fontOptions.scale = 0.8F;
+    fontOptions.maxWidth = SLOT_WIDTH - 20;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == OptionsScreenOptions::CamSensitivityH
@@ -86,6 +89,7 @@ void ScreenOptions::render() {
     baseY += 40;
     FontOptions fontOptions;
     fontOptions.scale = 0.8F;
+    fontOptions.maxWidth = SLOT_WIDTH - 20;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == OptionsScreenOptions::CamSensitivityV
@@ -101,6 +105,7 @@ void ScreenOptions::render() {
     baseY += 40;
     FontOptions fontOptions;
     fontOptions.scale = 0.8F;
+    fontOptions.maxWidth = SLOT_WIDTH - 20;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == OptionsScreenOptions::ChangeLanguage
@@ -114,6 +119,7 @@ void ScreenOptions::render() {
     baseY += 40;
     FontOptions fontOptions;
     fontOptions.scale = 0.8F;
+    fontOptions.maxWidth = SLOT_WIDTH - 20;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == OptionsScreenOptions::LStickDeadZoneH
@@ -131,6 +137,7 @@ void ScreenOptions::render() {
     baseY += 40;
     FontOptions fontOptions;
     fontOptions.scale = 0.8F;
+    fontOptions.maxWidth = SLOT_WIDTH - 20;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == OptionsScreenOptions::LStickDeadZoneV
@@ -147,6 +154,7 @@ void ScreenOptions::render() {
     baseY += 40;
     FontOptions fontOptions;
     fontOptions.scale = 0.8F;
+    fontOptions.maxWidth = SLOT_WIDTH - 20;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == OptionsScreenOptions::RStickDeadZoneH
@@ -163,6 +171,7 @@ void ScreenOptions::render() {
     baseY += 40;
     FontOptions fontOptions;
     fontOptions.scale = 0.8F;
+    fontOptions.maxWidth = SLOT_WIDTH - 20;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == OptionsScreenOptions::RStickDeadZoneV

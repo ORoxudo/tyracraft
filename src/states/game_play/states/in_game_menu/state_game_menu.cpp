@@ -113,6 +113,7 @@ void StateGameMenu::render() {
   FontOptions drawDistanceLabel;
   drawDistanceLabel.position.set(248, 180);
   drawDistanceLabel.alignment = TextAlignment::Center;
+  drawDistanceLabel.maxWidth = SLOT_WIDTH + 40;
 
   if (activeOption == GameMenuOptions::DrawDistance)
     drawDistanceLabel.color.set(128, 128, 0);
@@ -130,6 +131,7 @@ void StateGameMenu::render() {
   FontOptions saveGameLabel;
   saveGameLabel.position.set(246, 240 + 3);
   saveGameLabel.alignment = TextAlignment::Center;
+  saveGameLabel.maxWidth = SLOT_WIDTH - 20;
   if (activeOption == GameMenuOptions::SaveGame)
     saveGameLabel.color.set(128, 128, 0);
   FontManager_printText(Label_Save, saveGameLabel);
@@ -137,6 +139,7 @@ void StateGameMenu::render() {
   FontOptions quitToTitleLabel;
   quitToTitleLabel.position.set(246, 240 + 43);
   quitToTitleLabel.alignment = TextAlignment::Center;
+  quitToTitleLabel.maxWidth = SLOT_WIDTH - 20;
   if (activeOption == GameMenuOptions::Quit)
     quitToTitleLabel.color.set(128, 128, 0);
   FontManager_printText(Label_Quit, quitToTitleLabel);
@@ -149,7 +152,7 @@ void StateGameMenu::render() {
     t_renderer->renderer2D.render(btnCross);
     FontManager_printText(Label_Select, 40, 407);
     t_renderer->renderer2D.render(btnStart);
-    FontManager_printText(Label_BackToGame, 205, 407);
+    FontManager_printText(Label_BackToGame, FontOptions(Vec2(205, 407)));
   }
 }
 
@@ -305,12 +308,14 @@ void StateGameMenu::renderSaveOverwritingDialog() {
   titleOptions.position = Vec2(246, 135);
   titleOptions.scale = 0.9F;
   titleOptions.alignment = TextAlignment::Center;
+  titleOptions.maxWidth = 236;
   FontManager_printText(Label_OverwriteGameAsk, titleOptions);
 
   FontOptions dialogueOptions = FontOptions();
   dialogueOptions.position = Vec2(246, 190);
   dialogueOptions.scale = 0.6F;
   dialogueOptions.alignment = TextAlignment::Center;
+  dialogueOptions.maxWidth = 236;
   FontManager_printText(Label_LocalSaveWillBeOverWriten, dialogueOptions);
   dialogueOptions.position.y += 15;
   FontManager_printText(Label_DoYouWantToContinue, dialogueOptions);
@@ -330,12 +335,14 @@ void StateGameMenu::renderQuitWithoutSavingDialog() {
   titleOptions.position = Vec2(246, 135);
   titleOptions.scale = 0.9F;
   titleOptions.alignment = TextAlignment::Center;
+  titleOptions.maxWidth = 236;
   FontManager_printText(Label_AreYouSure, titleOptions);
 
   FontOptions dialogueOptions = FontOptions();
   dialogueOptions.position = Vec2(246, 190);
   dialogueOptions.scale = 0.6F;
   dialogueOptions.alignment = TextAlignment::Center;
+  dialogueOptions.maxWidth = 236;
   FontManager_printText(Label_AllUnsavedProgressWillBeLost, dialogueOptions);
   dialogueOptions.position.y += 15;
   FontManager_printText(Label_DoYouWantToContinue, dialogueOptions);

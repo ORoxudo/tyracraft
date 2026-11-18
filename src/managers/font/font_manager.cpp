@@ -104,10 +104,21 @@ void FontManager_printText(const char* text, const FontOptions& options) {
   FontManager_printText(tempWstr.c_str(), tempWstr.length(), options);
 }
 
+/**
+ * The (text, x, y) form is mostly used for the button hints at the bottom of
+ * the screen (y = 407). The next hint starts ~125px to the right, so keep
+ * those labels at most 100px wide.
+ */
+static FontOptions FontManager_xyOptions(const float& x, const float& y) {
+  FontOptions options(Vec2(x, y));
+  if (y >= 400.0F) options.maxWidth = 100.0F;
+  return options;
+}
+
 void FontManager_printText(const char* text, const float& x, const float& y) {
   const std::wstring& tempWstr = FontManager_decodeUtf8(text);
   FontManager_printText(tempWstr.c_str(), tempWstr.length(),
-                        FontOptions(Vec2(x, y)));
+                        FontManager_xyOptions(x, y));
 }
 
 // void FontManager_printText(const std::string& text, const float& x,
@@ -119,8 +130,50 @@ void FontManager_printText(const wchar_t* text, const size_t length,
                            const FontOptions& options) {
   float cursorX = 0.0F;
   float cursorY = 0.0F;
+
+  // Width of the widest line at scale 1
+  float rawWidth = 0.0F;
+  {
+    float lineWidth = 0.0F;
+    for (size_t i = 0; i < length; i++) {
+      const u8 charCode = FontManager_getCodeFromChar(text[i]);
+      if (charCode == LINE_FEED) {
+        lineWidth = 0.0F;
+        continue;
+      }
+      lineWidth += char_widths[charCode] + 2;
+      if (lineWidth > rawWidth) rawWidth = lineWidth;
+    }
+  }
+
+  // Shrink the text when it doesn't fit its box or would leave the screen
+  float scale = options.scale;
+  if (rawWidth > 0.0F) {
+    const float SCREEN_WIDTH = 512.0F;
+    const float MARGIN = 4.0F;
+    const float x = options.position.x;
+    float available;
+    if (options.alignment == TextAlignment::Center) {
+      const float left = x - MARGIN;
+      const float right = SCREEN_WIDTH - MARGIN - x;
+      available = 2.0F * (left < right ? left : right);
+    } else if (options.alignment == TextAlignment::Right) {
+      available = x - MARGIN;
+    } else {
+      available = SCREEN_WIDTH - MARGIN - x;
+    }
+    if (options.maxWidth > 0.0F && options.maxWidth < available)
+      available = options.maxWidth;
+
+    if (available > 8.0F && rawWidth * scale > available)
+      scale = available / rawWidth;
+  }
+
+  // Keep shrunk text vertically centered on the line it was meant for
+  const float yShift = (options.scale - scale) * (BASE_LINE_HEIGHT / 2.0F);
+
   float padding = FontManager_calcLinePadding(text, length, options.alignment);
-  padding *= options.scale;
+  padding *= scale;
 
   for (size_t i = 0; i < length; i++) {
     const u8 charCode = FontManager_getCodeFromChar(text[i]);
@@ -129,19 +182,19 @@ void FontManager_printText(const wchar_t* text, const size_t length,
     if (fontCharAt != nullptr) {
       // Break line
       if (charCode == LINE_FEED) {
-        cursorY += BASE_LINE_HEIGHT * options.scale;
+        cursorY += BASE_LINE_HEIGHT * scale;
         cursorX = 0;
         continue;
       }
 
       Sprite spriteToPrint = *fontCharAt;
       spriteToPrint.position.set(options.position.x + cursorX - padding,
-                                 options.position.y + cursorY);
+                                 options.position.y + yShift + cursorY);
       spriteToPrint.color.set(options.color);
-      spriteToPrint.scale = options.scale;
+      spriteToPrint.scale = scale;
 
       g_t_renderer->renderer2D.render(spriteToPrint);
-      cursorX += (char_widths[charCode] + 2) * options.scale;
+      cursorX += (char_widths[charCode] + 2) * scale;
     } else {
       TYRA_TRAP(std::string("Char at ")
                     .append(std::to_string(i))
@@ -226,7 +279,7 @@ void FontManager_printText(const std::string& text, const float& x,
                            const float& y) {
   const std::wstring& tempWstr = FontManager_decodeUtf8(text.c_str());
   FontManager_printText(tempWstr.c_str(), tempWstr.size(),
-                        FontOptions(Vec2(x, y)));
+                        FontManager_xyOptions(x, y));
 }
 
 void FontManager_printText(const std::wstring& text,
@@ -236,5 +289,6 @@ void FontManager_printText(const std::wstring& text,
 
 void FontManager_printText(const std::wstring& text, const float& x,
                            const float& y) {
-  FontManager_printText(text.c_str(), text.size(), FontOptions(Vec2(x, y)));
+  FontManager_printText(text.c_str(), text.size(),
+                        FontManager_xyOptions(x, y));
 }

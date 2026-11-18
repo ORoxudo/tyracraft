@@ -50,6 +50,7 @@ void ScreenMain::render() {
   // New Game
   {
     FontOptions fontOptions;
+    fontOptions.maxWidth = SLOT_WIDTH - 12;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == ScreenMainOptions::PlayGame
@@ -63,6 +64,7 @@ void ScreenMain::render() {
   {
     baseY += 40;
     FontOptions fontOptions;
+    fontOptions.maxWidth = SLOT_WIDTH - 12;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == ScreenMainOptions::Options
@@ -76,6 +78,7 @@ void ScreenMain::render() {
   {
     baseY += 40;
     FontOptions fontOptions;
+    fontOptions.maxWidth = SLOT_WIDTH - 12;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == ScreenMainOptions::HowToPlay
@@ -88,6 +91,7 @@ void ScreenMain::render() {
   {
     baseY += 40;
     FontOptions fontOptions;
+    fontOptions.maxWidth = SLOT_WIDTH - 12;
     fontOptions.position.set(Vec2(baseX, baseY));
     fontOptions.alignment = TextAlignment::Center;
     fontOptions.color.set(activeOption == ScreenMainOptions::About

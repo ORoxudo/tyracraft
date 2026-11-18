@@ -244,6 +244,12 @@ void World::tick(Player* t_player, Camera* t_camera) {
 }
 
 void World::renderOpaque() {
+  // Distance fog: blocks fade into the sky over the last ~7 blocks before the
+  // edge of the loaded area, so new chunks don't pop in out of nowhere.
+  Chunck::fogEnd =
+      (worldOptions.drawDistance * CHUNCK_SIZE - 2) * DUBLE_BLOCK_SIZE;
+  Chunck::fogStart = Chunck::fogEnd - 7.0F * DUBLE_BLOCK_SIZE;
+
   chunckManager.rendererOpaque(t_renderer, &stapip, &blockManager);
 };
 
@@ -392,7 +398,11 @@ void World::loadScheduledChunks() {
       if (tempChuncksToLoad.size() == 0) {
         tempChuncksToLoad.shrink_to_fit();
       }
-    } else if (chunk->state != ChunkState::Loaded) {
+    } else if (chunk->state == ChunkState::Loaded) {
+      // Already built some other way (e.g. synchronously). Without popping it
+      // the queue got stuck here and no other chunk ever loaded.
+      tempChuncksToLoad.pop_front();
+    } else {
       return buildChunkAsync(chunk);
     }
   }

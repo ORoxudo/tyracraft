@@ -51,7 +51,16 @@ class CreativePlayingState : public PlayingStateBase {
 
   CreativeAudioListener creativeAudioListener;
   u32 audioListenerId;
-  float elapsedTimeInSec;
+  float elapsedTimeInSec = 0.0F;
+
+  // Double tap Cross to start/stop flying
+  float timeSinceCrossTap = 10.0F;
+
+  // Push the left stick forward twice to sprint (like the Xbox 360 edition)
+  float timeSinceForwardPush = 10.0F;
+  bool wasStickForward = false;
+  bool isSprintingByStick = false;
+  void updateStickSprint(const float& deltaTime, const float& stickV);
   TickManager tickManager;
 
   Vec4 playerMovementDirection;

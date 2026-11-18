@@ -122,8 +122,10 @@ void CreativePlayingState::gamePlayInputHandler(const float& deltaTime) {
         Vec4(Utils::Abs(_h) > g_settings.l_stick_H ? _h : 0.0F, 0.0F,
              Utils::Abs(_v) > g_settings.l_stick_V ? _v : 0.0F);
 
-    // Set running state
-    stateGamePlay->player->setRunning((bool)pressed.Square);
+    // Run: push the stick forward twice (or hold Square)
+    updateStickSprint(deltaTime, _v);
+    stateGamePlay->player->setRunning(isSprintingByStick ||
+                                      (bool)pressed.Square);
 
     // Sneak with L3 (like Shift). While flying it makes you go down instead.
     stateGamePlay->player->setSneaking((bool)pressed.L3 &&
@@ -181,11 +183,15 @@ void CreativePlayingState::gamePlayInputHandler(const float& deltaTime) {
       }
     }
 
+    // Double tap Cross to start/stop flying
+    timeSinceCrossTap += deltaTime;
     if (clicked.Cross) {
-      if (elapsedTimeInSec < 0.45F) {
+      if (timeSinceCrossTap < 0.35F) {
         stateGamePlay->player->toggleFlying();
+        timeSinceCrossTap = 10.0F;  // a third tap starts a new double tap
+      } else {
+        timeSinceCrossTap = 0.0F;
       }
-      elapsedTimeInSec = 0.0F;
     }
 
     if (clicked.R3) {
@@ -209,6 +215,30 @@ void CreativePlayingState::gamePlayInputHandler(const float& deltaTime) {
       }
     }
   }
+}
+
+/**
+ * Sprint like the Xbox 360 edition: push the left stick forward, let it go
+ * back and push it forward again quickly. The sprint lasts while the stick is
+ * kept forward. Sneaking cancels it.
+ */
+void CreativePlayingState::updateStickSprint(const float& deltaTime,
+                                             const float& stickV) {
+  // Stick up = negative V = forward
+  const bool isForward = stickV < -0.6F;
+  const bool isStillForward = stickV < -0.3F;
+
+  timeSinceForwardPush += deltaTime;
+
+  if (isForward && !wasStickForward) {
+    if (timeSinceForwardPush < 0.35F) isSprintingByStick = true;
+    timeSinceForwardPush = 0.0F;
+  }
+
+  if (!isStillForward || stateGamePlay->player->isSneaking)
+    isSprintingByStick = false;
+
+  wasStickForward = isForward;
 }
 
 void CreativePlayingState::inventoryInputHandler(const float& deltaTime) {

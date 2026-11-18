@@ -7,6 +7,69 @@
 #include "managers/mesh/mesh_builder.hpp"
 #include "managers/collision_manager.hpp"
 #include "managers/clipping_manager.hpp"
+#include <dma.h>
+#include <cmath>
+
+float Chunck::fogStart = 0.0F;
+float Chunck::fogEnd = 0.0F;
+
+/**
+ * The pipeline sends its last DMA packet asynchronously and that packet
+ * points straight at our arrays. Wait for it before reusing a scratch buffer,
+ * otherwise the previous draw could read the next chunk's data.
+ */
+static inline void Chunck_waitLastDraw() {
+  dma_channel_wait(DMA_CHANNEL_VIF1, 0);
+}
+
+/** True when the farthest corner of the chunk can be inside the fog */
+static bool Chunck_canBeInFog(const Vec4& cam, const Vec4& min,
+                              const Vec4& max) {
+  if (Chunck::fogEnd <= 0.0F) return false;
+  const float fx =
+      std::max(std::fabs(cam.x - min.x), std::fabs(cam.x - max.x)) +
+      DUBLE_BLOCK_SIZE;
+  const float fy =
+      std::max(std::fabs(cam.y - min.y), std::fabs(cam.y - max.y)) +
+      DUBLE_BLOCK_SIZE;
+  const float fz =
+      std::max(std::fabs(cam.z - min.z), std::fabs(cam.z - max.z)) +
+      DUBLE_BLOCK_SIZE;
+  return fx * fx + fy * fy + fz * fz > Chunck::fogStart * Chunck::fogStart;
+}
+
+/**
+ * Copies `colors` into `out`, fading the alpha of the vertices that are
+ * inside the fog so they blend into the sky behind them.
+ * Returns false if no vertex was inside the fog (then `out` isn't needed).
+ */
+static bool Chunck_applyFog(const std::vector<Vec4>& verts,
+                            const std::vector<Color>& colors, const Vec4& cam,
+                            std::vector<Color>& out) {
+  const size_t count = std::min(verts.size(), colors.size());
+  const float start = Chunck::fogStart;
+  const float startSq = start * start;
+  const float invRange = 1.0F / (Chunck::fogEnd - start);
+  bool hasFog = false;
+
+  out.resize(count);
+  for (size_t i = 0; i < count; i++) {
+    const float dx = verts[i].x - cam.x;
+    const float dy = verts[i].y - cam.y;
+    const float dz = verts[i].z - cam.z;
+    const float distSq = dx * dx + dy * dy + dz * dz;
+
+    out[i] = colors[i];
+    if (distSq > startSq) {
+      float t = (std::sqrt(distSq) - start) * invRange;
+      if (t > 1.0F) t = 1.0F;
+      out[i].a = colors[i].a * (1.0F - t);
+      hasFog = true;
+    }
+  }
+
+  return hasFog;
+}
 
 Chunck::Chunck(const Vec4& minOffset, const Vec4& maxOffset, const u16& id) {
   this->id = id;
@@ -15,8 +78,13 @@ Chunck::Chunck(const Vec4& minOffset, const Vec4& maxOffset, const u16& id) {
   this->center.set((maxOffset + minOffset) / 2);
   tempLoadingOffset.set(minOffset);
 
-  const Vec4 tempMin = minOffset * DUBLE_BLOCK_SIZE;
-  const Vec4 tempMax = maxOffset * DUBLE_BLOCK_SIZE;
+  // Blocks are centered on offset * DUBLE_BLOCK_SIZE (they span +-BLOCK_SIZE),
+  // so the chunk geometry goes from min*16 - 8 to max*16 - 8. Without this
+  // shift the frustum check was half a block off and chunks at the screen
+  // edges could be skipped (holes in the ground).
+  const Vec4 halfBlock = Vec4(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+  const Vec4 tempMin = minOffset * DUBLE_BLOCK_SIZE - halfBlock;
+  const Vec4 tempMax = maxOffset * DUBLE_BLOCK_SIZE - halfBlock;
   scaledMinOffset.set(tempMin);
   scaledMaxOffset.set(tempMax);
 
@@ -61,9 +129,13 @@ void Chunck::updateSurroundingBlocks() {
   Vec4 camOffset = Vec4(std::lrint(tempOffset.x), std::lrint(tempOffset.y),
                         std::lrint(tempOffset.z));
 
-  for (s8 _x = -2; _x <= 2; _x++) {
-    for (s8 _y = -1; _y <= 1; _y++) {
-      for (s8 _z = -2; _z <= 2; _z++) {
+  // Blocks near the camera whose triangles can cross the camera plane get
+  // clipped on the CPU (the VU1 program just drops those triangles).
+  // The camera is ~2 blocks above the floor block, so look 3 blocks down:
+  // with only 1 the ground right in front of the feet had missing pieces.
+  for (s8 _x = -3; _x <= 3; _x++) {
+    for (s8 _y = -3; _y <= 2; _y++) {
+      for (s8 _z = -3; _z <= 3; _z++) {
         Vec4 _bOffset = camOffset + Vec4(_x, _y, _z);
 
         // Skip offsets outside this chunk: getBlockById() is a linear search
@@ -109,6 +181,17 @@ void Chunck::renderer(Renderer* t_renderer, StaticPipeline* stapip,
 
     colorBag.many = verticesColors.data();
 
+    // Distance fog: fade far blocks into the sky
+    static std::vector<Color> foggedColors;
+    if (Chunck_canBeInFog(camPositon, scaledMinOffset, scaledMaxOffset)) {
+      Chunck_waitLastDraw();
+      if (Chunck_applyFog(vertices, verticesColors, camPositon,
+                          foggedColors)) {
+        colorBag.many = foggedColors.data();
+        infoBag.blendingEnabled = true;
+      }
+    }
+
     bag.count = vertices.size();
     bag.vertices = vertices.data();
     bag.color = &colorBag;
@@ -150,6 +233,17 @@ void Chunck::rendererTransparentData(Renderer* t_renderer,
         Tyra::PipelineInfoBagFrustumCulling::PipelineInfoBagFrustumCulling_None;
 
     colorBag.many = verticesColorsWithTransparency.data();
+
+    // Distance fog (see renderer())
+    static std::vector<Color> foggedColors;
+    if (Chunck_canBeInFog(camPositon, scaledMinOffset, scaledMaxOffset)) {
+      Chunck_waitLastDraw();
+      if (Chunck_applyFog(verticesWithTransparency,
+                          verticesColorsWithTransparency, camPositon,
+                          foggedColors)) {
+        colorBag.many = foggedColors.data();
+      }
+    }
 
     bag.count = verticesWithTransparency.size();
     bag.vertices = verticesWithTransparency.data();
@@ -199,6 +293,9 @@ void Chunck::renderPartialBlocks(Renderer* t_renderer, u8 hasTransparency,
   static std::vector<Vec4> outVertices;
   static std::vector<Vec4> outUVMap;
   static std::vector<Color> outColors;
+
+  // The previous partial draw may still be reading these buffers
+  Chunck_waitLastDraw();
 
   outVertices.clear();
   outUVMap.clear();

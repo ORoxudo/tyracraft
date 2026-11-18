@@ -117,6 +117,13 @@ class Chunck {
 
   inline void setCamPosition(Vec4* pos) { this->camPositon.set(*pos); };
 
+  /**
+   * Distance fog, in world units. Blocks fade into the sky between fogStart
+   * and fogEnd (from the camera). fogEnd <= 0 disables it. Set by World.
+   */
+  static float fogStart;
+  static float fogEnd;
+
   // Block controllers
   inline void addBlock(Block* t_block) {
     t_block->localIndex = blocks.size();

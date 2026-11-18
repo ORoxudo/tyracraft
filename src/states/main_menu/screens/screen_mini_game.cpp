@@ -53,15 +53,15 @@ void ScreenMiniGame::render() {
   this->renderSelectedOptions();
 
   FontManager_printText(
-      Label_Load, FontOptions(Vec2(140, 128), Color(180, 180, 180), 0.9F));
+      Label_Load, FontOptions(Vec2(140, 128), Color(180, 180, 180), 0.9F, TextAlignment::Left, 76));
   FontManager_printText(
-      Label_Create, FontOptions(Vec2(220, 128), Color(250, 250, 250), 0.9F));
+      Label_Create, FontOptions(Vec2(220, 128), Color(250, 250, 250), 0.9F, TextAlignment::Left, 84));
   FontManager_printText(
-      Label_Mini, FontOptions(Vec2(310, 128), Color(250, 250, 250), 0.9F));
+      Label_Mini, FontOptions(Vec2(310, 128), Color(250, 250, 250), 0.9F, TextAlignment::Left, 70));
 
   Color infoColor = Color(70, 70, 70);
   FontManager_printText(Label_MiniGame,
-                        FontOptions(Vec2(185, 157), infoColor, 0.8F));
+                        FontOptions(Vec2(185, 157), infoColor, 0.8F, TextAlignment::Left, 195));
 
   if (selectedMiniGame) {
     this->t_renderer->renderer2D.render(selectedMiniGame->icon);
@@ -508,12 +508,14 @@ void ScreenMiniGame::renderPreviousSavePresentDialog() {
   titleOptions.position = Vec2(246, 135);
   titleOptions.scale = 0.9F;
   titleOptions.alignment = TextAlignment::Center;
+  titleOptions.maxWidth = 236;
   FontManager_printText(Label_Ops, titleOptions);
 
   FontOptions dialogueOptions = FontOptions();
   dialogueOptions.position = Vec2(246, 180);
   dialogueOptions.scale = 0.6F;
   dialogueOptions.alignment = TextAlignment::Center;
+  dialogueOptions.maxWidth = 236;
   FontManager_printText(Label_PreviousSavePresentErrorPart1, dialogueOptions);
   dialogueOptions.position.y += 15;
   FontManager_printText(Label_PreviousSavePresentErrorPart2, dialogueOptions);
@@ -532,12 +534,14 @@ void ScreenMiniGame::renderProgressResetedDialog() {
   titleOptions.position = Vec2(246, 135);
   titleOptions.scale = 0.9F;
   titleOptions.alignment = TextAlignment::Center;
+  titleOptions.maxWidth = 236;
   FontManager_printText(Label_Success, titleOptions);
 
   FontOptions dialogueOptions = FontOptions();
   dialogueOptions.position = Vec2(246, 180);
   dialogueOptions.scale = 0.6F;
   dialogueOptions.alignment = TextAlignment::Center;
+  dialogueOptions.maxWidth = 236;
   FontManager_printText(Label_PreviousSaveDeletedSuccessPart1, dialogueOptions);
   dialogueOptions.position.y += 15;
   FontManager_printText(Label_PreviousSaveDeletedSuccessPart2, dialogueOptions);

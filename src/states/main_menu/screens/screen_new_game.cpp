@@ -54,15 +54,15 @@ void ScreenNewGame::render() {
   this->renderSelectedOptions();
 
   FontManager_printText(
-      Label_Load, FontOptions(Vec2(140, 128), Color(180, 180, 180), 0.9F));
+      Label_Load, FontOptions(Vec2(140, 128), Color(180, 180, 180), 0.9F, TextAlignment::Left, 76));
   FontManager_printText(
-      Label_Create, FontOptions(Vec2(220, 128), Color(250, 250, 250), 0.9F));
+      Label_Create, FontOptions(Vec2(220, 128), Color(250, 250, 250), 0.9F, TextAlignment::Left, 84));
   FontManager_printText(
-      Label_Mini, FontOptions(Vec2(310, 128), Color(250, 250, 250), 0.9F));
+      Label_Mini, FontOptions(Vec2(310, 128), Color(250, 250, 250), 0.9F, TextAlignment::Left, 70));
 
   Color infoColor = Color(70, 70, 70);
   FontManager_printText(Label_TexturePack,
-                        FontOptions(Vec2(185, 157), infoColor, 0.8F));
+                        FontOptions(Vec2(185, 157), infoColor, 0.8F, TextAlignment::Left, 195));
   FontManager_printText(Label_By, FontOptions(Vec2(185, 187), infoColor, 0.8F));
 
   if (selectedTexturePack) {
@@ -88,6 +88,7 @@ void ScreenNewGame::render() {
     FontOptions options;
     options.position = Vec2(242, 220);
     options.alignment = TextAlignment::Center;
+    options.maxWidth = slotWidth - 16;
     FontManager_printText(inputWorldName, options);
   }
 
@@ -106,11 +107,13 @@ void ScreenNewGame::render() {
     FontOptions options;
     options.position = Vec2(242, 258);
     options.alignment = TextAlignment::Center;
+    options.maxWidth = slotWidth - 16;
     FontManager_printText(Label_Seed + inputSeed, options);
   }
 
   FontOptions worldTypeOptions;
   worldTypeOptions.alignment = TextAlignment::Center;
+  worldTypeOptions.maxWidth = slotWidth - 16;
 
   switch (this->model.type) {
     case WorldType::WORLD_TYPE_ORIGINAL:
@@ -138,7 +141,10 @@ void ScreenNewGame::render() {
       break;
   }
 
-  FontManager_printText(Label_CreateNewWorld, 145, 332);
+  FontManager_printText(
+      Label_CreateNewWorld,
+      FontOptions(Vec2(145, 332), Color(255, 255, 255), 1.0F,
+                  TextAlignment::Left, slotWidth - 24));
 
   if (isEditingSeed) {
     this->t_renderer->renderer2D.render(btnTriangle);
@@ -699,12 +705,14 @@ void ScreenNewGame::renderWorldNameDialog() {
   titleOptions.position = Vec2(246, 135);
   titleOptions.scale = 0.9F;
   titleOptions.alignment = TextAlignment::Center;
+  titleOptions.maxWidth = 236;
   FontManager_printText(Label_Ops, titleOptions);
 
   FontOptions dialogueOptions = FontOptions();
   dialogueOptions.position = Vec2(246, 180);
   dialogueOptions.scale = 0.6F;
   dialogueOptions.alignment = TextAlignment::Center;
+  dialogueOptions.maxWidth = 236;
   FontManager_printText(Label_WorldNameErrorPart1, dialogueOptions);
   dialogueOptions.position.y += 15;
   FontManager_printText(Label_WorldNameErrorPart2, dialogueOptions);

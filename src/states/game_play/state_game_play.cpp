@@ -68,7 +68,9 @@ void StateGamePlay::handleGameMode(const GameMode& gameMode) {
 void StateGamePlay::init() {
   // TODO: add in game skybox;
   this->state->init();
-  displayWelcome();
+  // Only the Maze mini game keeps its intro screen (it explains the goal).
+  // The "message from Wellinator" welcome screen is skipped.
+  if (_gameMode == GameMode::Maze) displayWelcome();
 }
 
 void StateGamePlay::afterInit() {
